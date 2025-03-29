@@ -38,6 +38,9 @@ group :development, :test do
 
   # Testing framework
   gem "rspec-rails"
+
+  # Environment variable management
+  gem "dotenv-rails"
 end
 
 group :development do
