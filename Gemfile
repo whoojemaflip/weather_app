@@ -43,6 +43,11 @@ group :development, :test do
   gem "dotenv-rails"
 end
 
+group :test do
+  # HTTP request stubbing for tests
+  gem "webmock"
+end
+
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
