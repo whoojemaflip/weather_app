@@ -1,3 +1,8 @@
+require 'net/http'
+require 'json'
+require 'uri'
+require 'time'
+
 class WeatherApiService
   class Error < StandardError; end
   class InvalidLocationError < Error; end
@@ -20,12 +25,10 @@ class WeatherApiService
   private
 
   def self.make_request(location)
-    uri = URI("#{BASE_URL}/forecast.json")
+    uri = URI("#{BASE_URL}/current.json")
     uri.query = URI.encode_www_form(
       key: ENV["WEATHER_API_KEY"],
-      q: location,
-      days: 7,
-      aqi: "no"
+      q: location
     )
 
     response = Net::HTTP.get_response(uri)
@@ -33,7 +36,7 @@ class WeatherApiService
     case response
     when Net::HTTPSuccess
       response.body
-    when Net::HTTPNotFound
+    when Net::HTTPNotFound, Net::HTTPBadRequest
       raise InvalidLocationError, "Location not found: #{location}"
     else
       raise ApiError, "API request failed: #{response.code} - #{response.message}"
@@ -53,16 +56,7 @@ class WeatherApiService
         temperature: data["current"]["temp_c"],
         condition: data["current"]["condition"]["text"],
         icon: data["current"]["condition"]["icon"]
-      },
-      forecast: data["forecast"]["forecastday"].map do |day|
-        {
-          date: day["date"],
-          max_temp: day["day"]["maxtemp_c"],
-          min_temp: day["day"]["mintemp_c"],
-          condition: day["day"]["condition"]["text"],
-          icon: day["day"]["condition"]["icon"]
-        }
-      end
+      }
     }
   end
 

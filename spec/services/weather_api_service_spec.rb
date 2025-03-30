@@ -9,6 +9,8 @@ RSpec.describe WeatherApiService do
   end
 
   describe '.fetch_forecast' do
+    subject(:fetch_forecast) { described_class.fetch_forecast(location) }
+
     context 'when the API request is successful' do
       let(:successful_response) do
         {
@@ -53,9 +55,7 @@ RSpec.describe WeatherApiService do
       end
 
       it 'returns parsed weather data' do
-        result = described_class.fetch_forecast(location)
-
-        expect(result).to include(
+        expect(subject).to include(
           location: {
             name: 'London',
             country: 'United Kingdom',
@@ -67,15 +67,6 @@ RSpec.describe WeatherApiService do
             icon: '//cdn.weatherapi.com/weather/64x64/day/116.png'
           }
         )
-
-        expect(result[:forecast]).to be_an(Array)
-        expect(result[:forecast].first).to include(
-          date: '2024-03-29',
-          max_temp: 18.0,
-          min_temp: 12.0,
-          condition: 'Partly cloudy',
-          icon: '//cdn.weatherapi.com/weather/64x64/day/116.png'
-        )
       end
 
       it 'caches the response' do
@@ -83,7 +74,7 @@ RSpec.describe WeatherApiService do
           .with("weather_forecast_#{location.downcase}", expires_in: 30.minutes)
           .and_call_original
 
-        described_class.fetch_forecast(location)
+        fetch_forecast
       end
     end
 
@@ -91,11 +82,11 @@ RSpec.describe WeatherApiService do
       before do
         stub_request(:get, /api.weatherapi.com/)
           .with(query: hash_including(key: api_key, q: location))
-          .to_return(status: 404)
+          .to_return(status: 400)
       end
 
       it 'raises InvalidLocationError' do
-        expect { described_class.fetch_forecast(location) }
+        expect { subject }
           .to raise_error(WeatherApiService::InvalidLocationError)
       end
     end
@@ -108,7 +99,7 @@ RSpec.describe WeatherApiService do
       end
 
       it 'raises ApiError' do
-        expect { described_class.fetch_forecast(location) }
+        expect { subject }
           .to raise_error(WeatherApiService::ApiError)
       end
     end
@@ -121,7 +112,7 @@ RSpec.describe WeatherApiService do
       end
 
       it 'raises ApiError' do
-        expect { described_class.fetch_forecast(location) }
+        expect { subject }
           .to raise_error(WeatherApiService::ApiError)
       end
     end
