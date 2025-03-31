@@ -1,24 +1,73 @@
-# README
+# Weather App
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+A Ruby on Rails application that provides same-day weather forecasts for any given US zipcode. The app retrieves current temperature and forecast data, with caching implemented for improved performance.
 
-Things you may want to cover:
+## Features
 
-* Ruby version
+- Address-based weather lookup
+- Current temperature display
+- Extended forecast information (for the current day)
+- 30-minute caching for zip code-based requests
+- Cache status indicator
+- Comprehensive test suite
+- Code quality checks with RuboCop
 
-* System dependencies
+## Prerequisites
 
-* Configuration
+- Ruby 3.3.1
+- Rails 8.0.2
+- WeatherAPI.com API key
 
-* Database creation
+## Setup
 
-* Database initialization
+1. Clone the repository:
+```bash
+git clone git@github.com:whoojemaflip/weather_app.git
+cd weather_app
+```
 
-* How to run the test suite
+2. Install dependencies:
+```bash
+bundle install
+```
 
-* Services (job queues, cache servers, search engines, etc.)
+3. Configure WeatherAPI.com API key:
+   - Sign up for a free API key at [WeatherAPI.com](https://www.weatherapi.com/)
+   - Copy the example environment file:
+   ```bash
+   cp example.env .env
+   ```
+   - Add your API key to the `.env` file:
+   ```
+   WEATHER_API_KEY=your_api_key_here
+   ```
 
-* Deployment instructions
+## Running the Application
 
-* ...
+Start the Rails server:
+```bash
+rails server
+```
+
+Visit `http://localhost:3000` in your browser.
+
+## Development Commands
+
+### Running Tests
+```bash
+# Run all tests
+bundle exec rspec
+```
+
+### Code Quality Checks
+```bash
+# Run RuboCop
+bundle exec rubocop
+```
+
+
+## Caching
+
+The application implements a 30-minute cache for weather data based on zip codes. When viewing weather information, you'll see an indicator if the data is being served from the cache.
+
+
