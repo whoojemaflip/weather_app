@@ -69,7 +69,7 @@ RSpec.describe WeatherService do
 
       it 'returns a SuccessResponse' do
         result = fetch_forecast
-        expect(result).to be_a(WeatherApiService::SuccessResponse)
+        expect(result).to be_a(WeatherService::SuccessResponse)
       end
 
       it 'has success? returning true' do
@@ -113,7 +113,7 @@ RSpec.describe WeatherService do
 
       it 'returns a SuccessResponse' do
         result = fetch_forecast
-        expect(result).to be_a(WeatherApiService::SuccessResponse)
+        expect(result).to be_a(WeatherService::SuccessResponse)
       end
 
       it 'has success? returning true' do
@@ -146,7 +146,7 @@ RSpec.describe WeatherService do
 
       it 'returns an ErrorResponse' do
         result = fetch_forecast
-        expect(result).to be_a(WeatherApiService::ErrorResponse)
+        expect(result).to be_a(WeatherService::ErrorResponse)
       end
 
       it 'has success? returning false' do

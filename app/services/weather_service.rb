@@ -20,7 +20,12 @@ class WeatherService
   validate :valid_us_zip_code
 
   def self.call(location)
-    new(location: location).fetch_forecast
+    service = new(location: location)
+    if service.valid?
+      service.fetch_forecast
+    else
+      ErrorResponse.new(error_message: service.errors.full_messages.join(", "))
+    end
   end
 
   def initialize(location: nil, client: nil)

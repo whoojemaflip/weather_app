@@ -1,0 +1,36 @@
+<div class="weather-container">
+  <div class="weather-card">
+    <div class="weather-header">
+      <h1 class="weather-title">Weather in <%= @forecast.location %></h1>
+      <% if @from_cache %>
+        <span class="weather-cache-indicator">(From cache)</span>
+      <% end %>
+    </div>
+
+    <div class="weather-content">
+      <div class="weather-content-center">
+        <div class="weather-temp">
+          <%= @forecast.current_temp %>°F
+        </div>
+        <div class="weather-conditions">
+          <%= @forecast.conditions %>
+        </div>
+
+        <div class="weather-temp-grid">
+          <div class="weather-content-center">
+            <div class="weather-temp-label">High</div>
+            <div class="weather-temp-value"><%= @forecast.high_temp %>°F</div>
+          </div>
+          <div class="weather-content-center">
+            <div class="weather-temp-label">Low</div>
+            <div class="weather-temp-value"><%= @forecast.low_temp %>°F</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="weather-footer">
+      <%= link_to "Check Another Location", new_weather_path, class: "weather-link" %>
+    </div>
+  </div>
+</div>
