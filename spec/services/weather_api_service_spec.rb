@@ -1,119 +1,121 @@
 require 'rails_helper'
 
 RSpec.describe WeatherApiService do
-  let(:location) { 'London' }
-  let(:api_key) { 'test_api_key' }
+  let(:location) { '12345' }
+  let(:client) { instance_double(WeatherApiClient) }
+  let(:service) { described_class.new(location: location, client: client) }
 
-  before do
-    allow(ENV).to receive(:[]).with('WEATHER_API_KEY').and_return(api_key)
+  describe 'validations' do
+    context 'when location is a valid 5-digit zip code' do
+      let(:location) { '12345' }
+
+      it 'is valid' do
+        expect(service).to be_valid
+      end
+    end
+
+    context 'when location is a valid 5+4 zip code' do
+      let(:location) { '12345-6789' }
+
+      it 'is valid' do
+        expect(service).to be_valid
+      end
+    end
+
+    context 'when location is not a valid zip code' do
+      let(:location) { 'London' }
+
+      it 'is invalid' do
+        expect(service).not_to be_valid
+      end
+
+      it 'has the correct error message' do
+        service.valid?
+        expect(service.errors[:location]).to include('must be a valid US zip code (e.g., 12345 or 12345-6789)')
+      end
+    end
+
+    context 'when location is blank' do
+      let(:location) { '' }
+
+      it 'is invalid' do
+        expect(service).not_to be_valid
+      end
+
+      it 'has the correct error message' do
+        service.valid?
+        expect(service.errors[:location]).to include("can't be blank")
+      end
+    end
   end
 
-  describe '.fetch_forecast' do
-    subject(:fetch_forecast) { described_class.fetch_forecast(location) }
+  describe '#fetch_forecast' do
+    subject(:fetch_forecast) { service.fetch_forecast }
+
+    let(:weather_forecast) do
+      WeatherForecast.new(
+        location: 'New York',
+        current_temp: 15.0,
+        high_temp: 20.0,
+        low_temp: 10.0,
+        conditions: 'Partly cloudy'
+      )
+    end
 
     context 'when the API request is successful' do
-      let(:successful_response) do
-        {
-          'location' => {
-            'name' => 'London',
-            'country' => 'United Kingdom',
-            'localtime' => '2024-03-29 20:00'
-          },
-          'current' => {
-            'temp_c' => 15.0,
-            'condition' => {
-              'text' => 'Partly cloudy',
-              'icon' => '//cdn.weatherapi.com/weather/64x64/day/116.png'
-            }
-          },
-          'forecast' => {
-            'forecastday' => [
-              {
-                'date' => '2024-03-29',
-                'day' => {
-                  'maxtemp_c' => 18.0,
-                  'mintemp_c' => 12.0,
-                  'condition' => {
-                    'text' => 'Partly cloudy',
-                    'icon' => '//cdn.weatherapi.com/weather/64x64/day/116.png'
-                  }
-                }
-              }
-            ]
-          }
-        }
-      end
-
       before do
-        stub_request(:get, /api.weatherapi.com/)
-          .with(query: hash_including(key: api_key, q: location))
-          .to_return(
-            status: 200,
-            body: successful_response.to_json,
-            headers: { 'Content-Type' => 'application/json' }
-          )
+        allow(client).to receive(:fetch_current_weather).with(location).and_return(weather_forecast)
       end
 
-      it 'returns parsed weather data' do
-        expect(subject).to include(
-          location: {
-            name: 'London',
-            country: 'United Kingdom',
-            local_time: '2024-03-29 20:00'
-          },
-          current: {
-            temperature: 15.0,
-            condition: 'Partly cloudy',
-            icon: '//cdn.weatherapi.com/weather/64x64/day/116.png'
-          }
-        )
+      it 'returns a SuccessResponse' do
+        result = subject
+        expect(result).to be_a(WeatherApiService::SuccessResponse)
       end
 
-      it 'caches the response' do
+      it 'has success? returning true' do
+        result = subject
+        expect(result.success?).to be true
+      end
+
+      it 'contains the WeatherForecast from the client' do
+        result = subject
+        expect(result.forecast).to eq(weather_forecast)
+      end
+
+      it 'caches the response with the correct key' do
         expect(Rails.cache).to receive(:fetch)
           .with("weather_forecast_#{location.downcase}", expires_in: 30.minutes)
           .and_call_original
 
         fetch_forecast
       end
-    end
 
-    context 'when the location is not found' do
-      before do
-        stub_request(:get, /api.weatherapi.com/)
-          .with(query: hash_including(key: api_key, q: location))
-          .to_return(status: 400)
-      end
-
-      it 'raises InvalidLocationError' do
-        expect { subject }
-          .to raise_error(WeatherApiService::InvalidLocationError)
+      it 'uses the client to fetch weather data' do
+        expect(client).to receive(:fetch_current_weather).with(location)
+        fetch_forecast
       end
     end
 
-    context 'when the API request fails' do
+    context 'when the client raises an error' do
       before do
-        stub_request(:get, /api.weatherapi.com/)
-          .with(query: hash_including(key: api_key, q: location))
-          .to_return(status: 500, body: 'Internal Server Error')
+        allow(client).to receive(:fetch_current_weather)
+          .with(location)
+          .and_raise(WeatherApiClient::Error.new('API Error'))
       end
 
-      it 'raises ApiError' do
-        expect { subject }
-          .to raise_error(WeatherApiService::ApiError)
-      end
-    end
-
-    context 'when the response is invalid JSON' do
-      before do
-        stub_request(:get, /api.weatherapi.com/)
-          .with(query: hash_including(key: api_key, q: location))
-          .to_return(status: 200, body: 'Invalid JSON')
+      it 'returns an ErrorResponse' do
+        result = subject
+        expect(result).to be_a(WeatherApiService::ErrorResponse)
       end
 
-      it 'raises ApiError' do
-        expect { subject }
-          .to raise_error(WeatherApiService::ApiError)
+      it 'has success? returning false' do
+        result = subject
+        expect(result.success?).to be false
+      end
+
+      it 'contains the correct error message' do
+        result = subject
+        expect(result.error_message).to eq('API Error')
       end
     end
   end
