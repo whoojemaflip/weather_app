@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe WeatherApiService do
+RSpec.describe WeatherService do
   let(:location) { '12345' }
   let(:client) { instance_double(WeatherApiClient) }
   let(:service) { described_class.new(location: location, client: client) }

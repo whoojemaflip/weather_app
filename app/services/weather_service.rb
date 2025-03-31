@@ -1,6 +1,6 @@
 require "time"
 
-class WeatherApiService
+class WeatherService
   include ActiveModel::Model
   include ActiveModel::Validations
 
@@ -19,7 +19,11 @@ class WeatherApiService
   validates :location, presence: true
   validate :valid_us_zip_code
 
-  def initialize(location:, client: nil)
+  def self.call(location)
+    new(location: location).fetch_forecast
+  end
+
+  def initialize(location: nil, client: nil)
     @location = location
     @client = client || WeatherApiClient.new
     @cache = Rails.cache
