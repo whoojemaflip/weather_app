@@ -68,30 +68,71 @@ RSpec.describe WeatherApiService do
       end
 
       it 'returns a SuccessResponse' do
-        result = subject
+        result = fetch_forecast
         expect(result).to be_a(WeatherApiService::SuccessResponse)
       end
 
       it 'has success? returning true' do
-        result = subject
+        result = fetch_forecast
         expect(result.success?).to be true
       end
 
       it 'contains the WeatherForecast from the client' do
-        result = subject
+        result = fetch_forecast
         expect(result.forecast).to eq(weather_forecast)
       end
 
+      it 'indicates the forecast is not from cache' do
+        result = fetch_forecast
+        expect(result.from_cache).to be false
+      end
+
       it 'caches the response with the correct key' do
-        expect(Rails.cache).to receive(:fetch)
-          .with("weather_forecast_#{location.downcase}", expires_in: 30.minutes)
-          .and_call_original
+        expect(Rails.cache).to receive(:read)
+          .with("weather_forecast_#{location.downcase}")
+          .and_return(nil)
+
+        expect(Rails.cache).to receive(:write)
+          .with("weather_forecast_#{location.downcase}", weather_forecast, expires_in: 30.minutes)
 
         fetch_forecast
       end
 
       it 'uses the client to fetch weather data' do
         expect(client).to receive(:fetch_current_weather).with(location)
+        fetch_forecast
+      end
+    end
+
+    context 'when the forecast is cached' do
+      before do
+        allow(Rails.cache).to receive(:read)
+          .with("weather_forecast_#{location}")
+          .and_return(weather_forecast)
+      end
+
+      it 'returns a SuccessResponse' do
+        result = fetch_forecast
+        expect(result).to be_a(WeatherApiService::SuccessResponse)
+      end
+
+      it 'has success? returning true' do
+        result = fetch_forecast
+        expect(result.success?).to be true
+      end
+
+      it 'contains the cached WeatherForecast' do
+        result = fetch_forecast
+        expect(result.forecast).to eq(weather_forecast)
+      end
+
+      it 'indicates the forecast is from cache' do
+        result = fetch_forecast
+        expect(result.from_cache).to be true
+      end
+
+      it 'does not call the client' do
+        expect(client).not_to receive(:fetch_current_weather)
         fetch_forecast
       end
     end
@@ -104,17 +145,17 @@ RSpec.describe WeatherApiService do
       end
 
       it 'returns an ErrorResponse' do
-        result = subject
+        result = fetch_forecast
         expect(result).to be_a(WeatherApiService::ErrorResponse)
       end
 
       it 'has success? returning false' do
-        result = subject
+        result = fetch_forecast
         expect(result.success?).to be false
       end
 
       it 'contains the correct error message' do
-        result = subject
+        result = fetch_forecast
         expect(result.error_message).to eq('API Error')
       end
     end

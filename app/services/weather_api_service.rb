@@ -4,7 +4,7 @@ class WeatherApiService
   include ActiveModel::Model
   include ActiveModel::Validations
 
-  SuccessResponse = Data.define(:forecast) do
+  SuccessResponse = Data.define(:forecast, :from_cache) do
     def success? = true
   end
 
@@ -14,21 +14,26 @@ class WeatherApiService
 
   CACHE_DURATION = 30.minutes
 
-  attr_reader :location, :client
+  attr_reader :location, :client, :cache
 
   validates :location, presence: true
   validate :valid_us_zip_code
 
-  def initialize(location:, client: WeatherApiClient.new)
+  def initialize(location:, client: nil)
     @location = location
-    @client = client
+    @client = client || WeatherApiClient.new
+    @cache = Rails.cache
   end
 
   def fetch_forecast
-    Rails.cache.fetch(cache_key, expires_in: CACHE_DURATION) do
-      weather_forecast = client.fetch_current_weather(location)
-      SuccessResponse.new(forecast: weather_forecast)
+    if cached_forecast = cache.read(cache_key)
+      return SuccessResponse.new(forecast: cached_forecast, from_cache: true)
     end
+
+    forecast = client.fetch_current_weather(location)
+    cache.write(cache_key, forecast, expires_in: CACHE_DURATION)
+
+    SuccessResponse.new(forecast: forecast, from_cache: false)
   rescue WeatherApiClient::Error => e
     ErrorResponse.new(error_message: e.message)
   end
